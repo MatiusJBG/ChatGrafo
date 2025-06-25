@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Java Project",
+            "type": "shell",
+            "command": "javac -d bin src/**/*.java",
+            "group": "build",
+            "problemMatcher": ["$javac"]
+        },
+        {
+            "label": "Run Main",
+            "type": "shell",
+            "command": "java -cp bin Main",
+            "group": "test",
+            "dependsOn": "Build Java Project"
+        }
+    ]
+}
