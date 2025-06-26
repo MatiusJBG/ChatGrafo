@@ -5,6 +5,9 @@ import java.io.FileReader;
 import java.util.Scanner;
 import graph.SocialGraph;
 import user.User;
+import org.graphstream.graph.*;
+import org.graphstream.graph.implementations.*;
+import org.graphstream.ui.swingViewer.Viewer;
 
 public class Main {
     private static SocialGraph network;
@@ -207,23 +210,44 @@ private static void loadMinimumSampleUsers() {
         }
     }
 
-    private static void visualizeNetwork() {
-        System.out.println("\n--- Visualización de la Red ---");
-        System.out.println("Total de usuarios: " + network.getAllUserIds().size());
-        System.out.println("Relaciones de amistad:");
-
-        for (int userId : network.getAllUserIds()) {
-            User user = network.getUser(userId);
-            System.out.print(user.getName() + " (ID: " + user.getId() + ") → ");
-            
-            if (user.getFriends().isEmpty()) {
-                System.out.println("Sin amigos");
-            } else {
-                user.getFriends().forEach(friendId -> 
-                    System.out.print(network.getUser(friendId).getName() + " ")
-                );
-                System.out.println();
+private static void visualizeNetwork() {
+    System.out.println("\n--- Visualización de la Red con GraphStream ---");
+    
+    // Crear un nuevo grafo para GraphStream
+    System.setProperty("org.graphstream.ui", "swing");
+    Graph graph = new SingleGraph("Red Social");
+    
+    // Configuración visual del grafo
+    graph.setAttribute("ui.stylesheet", 
+        "node { size: 20px; fill-color: #4682B4; text-size: 12; text-alignment: above; }" +
+        "edge { fill-color: #777; size: 2px; }");
+    
+    // Añadir nodos (usuarios)
+    for (int userId : network.getAllUserIds()) {
+        User user = network.getUser(userId);
+        Node node = graph.addNode(String.valueOf(userId));
+        node.setAttribute("ui.label", user.getName() + " (ID:" + userId + ")");
+    }
+    
+    // Añadir aristas (amistades)
+    for (int userId : network.getAllUserIds()) {
+        User user = network.getUser(userId);
+        for (int friendId : user.getFriends()) {
+            if (graph.getNode(String.valueOf(friendId)) != null) { // Evitar aristas duplicadas
+                String edgeId = userId + "-" + friendId;
+                if (graph.getEdge(edgeId) == null) {
+                    graph.addEdge(edgeId, String.valueOf(userId), String.valueOf(friendId));
+                }
             }
         }
     }
+    
+    // Mostrar el grafo
+    Viewer viewer = graph.display();
+    viewer.setCloseFramePolicy(Viewer.CloseFramePolicy.HIDE_ONLY);
+    
+    // Mostrar resumen en consola
+    System.out.println("Total de usuarios: " + network.getAllUserIds().size());
+    System.out.println("Total de conexiones: " + graph.getEdgeCount());
+}
 }
