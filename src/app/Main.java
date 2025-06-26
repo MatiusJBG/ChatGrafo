@@ -7,7 +7,8 @@ import graph.SocialGraph;
 import user.User;
 import org.graphstream.graph.*;
 import org.graphstream.graph.implementations.*;
-import org.graphstream.ui.swingViewer.Viewer;
+import org.graphstream.ui.view.Viewer;
+import org.graphstream.ui.view.Viewer.CloseFramePolicy;
 
 public class Main {
     private static SocialGraph network;
@@ -44,6 +45,9 @@ public class Main {
                     visualizeNetwork();
                     break;
                 case 6:
+                    visualizeNetworkWithRelations();
+                    break;
+                case 7:
                     exit = true;
                     System.out.println("Saliendo del programa...");
                     break;
@@ -61,10 +65,46 @@ public class Main {
         System.out.println("3. Eliminar amistad");
         System.out.println("4. Eliminar usuario");
         System.out.println("5. Visualizar red");
-        System.out.println("6. Salir");
+        System.out.println("6. Visualizar solo nodos con relaciones");
+        System.out.println("7. Salir");
         System.out.print("Seleccione una opción: ");
     }
 
+    // Visualiza solo los nodos que tienen al menos una relación (amistad)
+    private static void visualizeNetworkWithRelations() {
+        System.out.println("\n--- Visualización de Nodos con Relaciones ---");
+        System.setProperty("org.graphstream.ui", "swing");
+        Graph graph = new SingleGraph("Red Social (Solo con relaciones)");
+        graph.setAttribute("ui.stylesheet",
+            "node { size: 20px; fill-color: #388E3C; text-size: 12; text-alignment: above; }" +
+            "edge { fill-color: #888; size: 2px; }");
+
+        // Solo agregar nodos con al menos una amistad
+        for (int userId : network.getAllUserIds()) {
+            User user = network.getUser(userId);
+            if (!user.getFriends().isEmpty()) {
+                Node node = graph.addNode(String.valueOf(userId));
+                node.setAttribute("ui.label", user.getName() + " (ID:" + userId + ")");
+            }
+        }
+        // Agregar solo aristas entre nodos que existen en el grafo
+        for (int userId : network.getAllUserIds()) {
+            User user = network.getUser(userId);
+            for (int friendId : user.getFriends()) {
+                if (graph.getNode(String.valueOf(userId)) != null && graph.getNode(String.valueOf(friendId)) != null) {
+                    String edgeId1 = userId + "-" + friendId;
+                    String edgeId2 = friendId + "-" + userId;
+                    if (graph.getEdge(edgeId1) == null && graph.getEdge(edgeId2) == null) {
+                        graph.addEdge(edgeId1, String.valueOf(userId), String.valueOf(friendId));
+                    }
+                }
+            }
+        }
+        Viewer viewer = graph.display();
+        viewer.setCloseFramePolicy(CloseFramePolicy.HIDE_ONLY);
+        System.out.println("Total de usuarios con relaciones: " + graph.getNodeCount());
+        System.out.println("Total de conexiones: " + graph.getEdgeCount());
+    }
     private static void loadUsersFromCSV(String filePath) {
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -233,10 +273,12 @@ private static void visualizeNetwork() {
     for (int userId : network.getAllUserIds()) {
         User user = network.getUser(userId);
         for (int friendId : user.getFriends()) {
-            if (graph.getNode(String.valueOf(friendId)) != null) { // Evitar aristas duplicadas
-                String edgeId = userId + "-" + friendId;
-                if (graph.getEdge(edgeId) == null) {
-                    graph.addEdge(edgeId, String.valueOf(userId), String.valueOf(friendId));
+            if (graph.getNode(String.valueOf(friendId)) != null) {
+                // Evitar aristas duplicadas en grafos no dirigidos
+                String edgeId1 = userId + "-" + friendId;
+                String edgeId2 = friendId + "-" + userId;
+                if (graph.getEdge(edgeId1) == null && graph.getEdge(edgeId2) == null) {
+                    graph.addEdge(edgeId1, String.valueOf(userId), String.valueOf(friendId));
                 }
             }
         }
@@ -244,7 +286,7 @@ private static void visualizeNetwork() {
     
     // Mostrar el grafo
     Viewer viewer = graph.display();
-    viewer.setCloseFramePolicy(Viewer.CloseFramePolicy.HIDE_ONLY);
+    viewer.setCloseFramePolicy(CloseFramePolicy.HIDE_ONLY);
     
     // Mostrar resumen en consola
     System.out.println("Total de usuarios: " + network.getAllUserIds().size());

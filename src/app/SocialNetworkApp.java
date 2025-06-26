@@ -6,6 +6,7 @@ import java.util.*;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.graphstream.graph.implementations.MultiGraph;
+import graph.InteractiveGraph;
 
 // --- CLASES AUXILIARES PARA UN EJEMPLO FUNCIONAL ---
 
@@ -113,7 +114,9 @@ public class SocialNetworkApp {
 
     // Método de respaldo para cargar usuarios si el CSV falla o no se proporciona
     public void loadDefaultUsers(int userCount) {
-        for (int i = 1; i <= userCount; i++) {
+        // Solo cargar 6 usuarios para visualización clara
+        int maxUsers = Math.min(userCount, 6);
+        for (int i = 1; i <= maxUsers; i++) {
             network.addUser(i, "User" + i);
             userNames.put(i, "User" + i);
         }
@@ -130,7 +133,6 @@ public class SocialNetworkApp {
             communities.add(c);
             colorPorComunidad.put(c.getName(), c.getColor());
         }
-        
         List<Integer> ids = new ArrayList<>(network.getAllUserIds());
         Collections.shuffle(ids, new Random());
         for (int i = 0; i < ids.size(); i++) {
@@ -141,6 +143,17 @@ public class SocialNetworkApp {
     }
 
     public void createRandomFriendships(int minFriends, int maxFriends) {
+        // Para pocos usuarios, crear amistades fijas para visualización clara
+        if (network.getAllUserIds().size() <= 6) {
+            // Conexiones manuales para 6 usuarios
+            network.addFriendship(1, 2);
+            network.addFriendship(1, 3);
+            network.addFriendship(2, 4);
+            network.addFriendship(3, 5);
+            network.addFriendship(4, 6);
+            network.addFriendship(5, 6);
+            return;
+        }
         Random rand = new Random();
         for (Community community : communities) {
             List<Integer> ids = new ArrayList<>(community.getMembers());
@@ -206,13 +219,11 @@ public class SocialNetworkApp {
                     int nodesInThisHex = 6 * h;
                     
                     for (int j = 0; j < nodesInThisHex && membersPlaced < nMembers; j++) {
-                        int userId = members.get(membersPlaced);
-                        double angle = (2 * Math.PI * j) / nodesInThisHex;
-                        
+                        double angle = 2 * Math.PI * j / nodesInThisHex;
                         double x = commCenterX + Math.cos(angle) * radius;
                         double y = commCenterY + Math.sin(angle) * radius;
                         
-                        graph.getNode(String.valueOf(userId)).setAttribute("xy", x, y);
+                        graph.getNode(String.valueOf(members.get(membersPlaced))).setAttribute("xy", x, y);
                         membersPlaced++;
                     }
                 }
@@ -261,7 +272,8 @@ public class SocialNetworkApp {
         
         System.out.println("[INFO] Puedes hacer zoom con la rueda del ratón y mover el grafo arrastrando con el mouse.");
         
-        graph.display(false);
+        // --- USO DE LA VENTANA INTERACTIVA ---
+        new InteractiveGraph(graph);
     }
 
     public static void main(String[] args) {
